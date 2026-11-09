@@ -1,0 +1,19 @@
+{
+  "name": "Gym Insight - React + Python + PostgreSQL",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "dev",
+  "runServices": ["postgres", "backend", "frontend", "dev"],
+  "workspaceFolder": "/workspace",
+  "forwardPorts": [5173, 8000, 5432],
+  "portsAttributes": {
+    "5173": { "label": "Gym Insight - Frontend", "onAutoForward": "openBrowser" },
+    "8000": { "label": "Gym Insight - API", "onAutoForward": "notify" },
+    "5432": { "label": "PostgreSQL", "onAutoForward": "silent" }
+  },
+  "postCreateCommand": "python3 -m venv .venv && .venv/bin/pip install -r backend/requirements.txt",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python", "ms-python.vscode-pylance"]
+    }
+  }
+}

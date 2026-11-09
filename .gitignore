@@ -1,0 +1,13 @@
+.venv/
+**/.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+.env
+.env.*.local
+node_modules/
+**/node_modules/
+dist/
+.pytest_cache/
+.DS_Store
+npm-debug.log*

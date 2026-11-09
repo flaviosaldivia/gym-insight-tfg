@@ -1,0 +1,88 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gym-insight-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-gym_bi}
+      POSTGRES_USER: ${POSTGRES_USER:-gym_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gym_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gym_user} -d ${POSTGRES_DB:-gym_bi}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gym-insight-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://gym_user:gym_password@postgres:5432/gym_bi}
+      FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:-http://localhost:5173}
+    ports:
+      - "8000:8000"
+    working_dir: /workspace/backend
+    volumes:
+      - .:/workspace
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gym-insight-web
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-}
+      VITE_PROXY_TARGET: http://backend:8000
+    working_dir: /workspace/frontend
+    command: ["sh", "-c", "npm install && npm run dev -- --host 0.0.0.0"]
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/workspace
+      - frontend_node_modules:/workspace/frontend/node_modules
+    depends_on:
+      - backend
+
+  dev:
+    build:
+      context: .
+      dockerfile: .devcontainer/Dockerfile
+    container_name: gym-insight-dev
+    working_dir: /workspace
+    command: ["sleep", "infinity"]
+    volumes:
+      - .:/workspace
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  seed:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    profiles: ["tools"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://gym_user:gym_password@postgres:5432/gym_bi}
+    working_dir: /workspace/backend
+    volumes:
+      - .:/workspace
+    command: ["python", "scripts/seed.py"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  frontend_node_modules:
